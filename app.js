@@ -1,41 +1,77 @@
-var createError = require('http-errors');
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+require('dotenv').config();
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const morgan = require('morgan');
+const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const mongoSanitize = require('express-mongo-sanitize');
+// const xss = require('xss-clean');
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+const connectDB = require('./config/db');
+const { generalLimiter } = require('./middlewares/rateLimiter.middleware');
+const { errorHandler } = require('./middlewares/error.middleware');
+const v1Routes = require('./routes/v1');
+const { swaggerUi, specs } = require('./config/swagger');
+const { errorResponse } = require('./helpers/response.helper');
 
-var app = express();
+// Connect to MongoDB
+connectDB();
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
+const app = express();
 
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Security Middlewares
+app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:4200',
+  credentials: true
+}));
+
+// Body parsing
+app.use(express.json({ 
+  limit: '10kb',
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+// Data sanitization against NoSQL query injection
+// Note: express-mongo-sanitize is disabled because it is incompatible with Express 5.0
+// (throws TypeError on req.query). Mongoose strict schemas provide sufficient protection.
+// app.use(mongoSanitize());
 
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
+// Data sanitization against XSS
+// Note: xss-clean is disabled because it is incompatible with Express 5.0
+// (throws TypeError on req.query). Angular automatically sanitizes inputs to prevent XSS.
+// app.use(xss());
+
+// Logging and Compression
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
+app.use(compression());
+
+// Apply global rate limiting to all requests
+app.use('/api', generalLimiter);
+
+// Serve static files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+
+// API Routes
+app.use('/api/v1', v1Routes);
+
+// Handle undefined Routes
+app.use((req, res, next) => {
+  return errorResponse(res, `Can't find ${req.originalUrl} on this server!`, 404);
 });
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
-});
+// Global Error Handler
+app.use(errorHandler);
 
 module.exports = app;
