@@ -79,3 +79,16 @@
 {"level":"error","message":"Get Products Error: Invalid status code: 1. Status code must be greater than 99 and less than 1000.","timestamp":"2026-06-19 15:46:05"}
 {"level":"error","message":"Get Products Error: Invalid status code: 1. Status code must be greater than 99 and less than 1000.","timestamp":"2026-06-19 15:46:05"}
 {"level":"error","message":"Get Products Error: Invalid status code: 1. Status code must be greater than 99 and less than 1000.","timestamp":"2026-06-19 15:46:17"}
+{"level":"error","message":"Refresh Token Error: jwt malformed","timestamp":"2026-06-19 16:51:43"}
+{"level":"error","message":"Login Error: Invalid email or password","timestamp":"2026-06-19 19:19:39"}
+{"level":"error","message":"Get Product By ID Error: Cannot populate path `reviews` because it is not in your schema. Set the `strictPopulate` option to false to override.","timestamp":"2026-06-20 19:05:09"}
+{"level":"error","message":"Get Product By ID Error: Cannot populate path `reviews` because it is not in your schema. Set the `strictPopulate` option to false to override.","timestamp":"2026-06-20 19:05:44"}
+{"level":"error","message":"Get Product By ID Error: Cannot populate path `reviews` because it is not in your schema. Set the `strictPopulate` option to false to override.","timestamp":"2026-06-20 19:05:44"}
+{"level":"error","message":"Refresh Token Error: jwt malformed","timestamp":"2026-06-20 19:22:48"}
+{"level":"error","message":"Add to Cart Error: Cart validation failed: items.0.productId: Path `productId` is required., userId: Path `userId` is required.","timestamp":"2026-06-20 19:40:43"}
+{"level":"error","message":"Add to Cart Error: Cart validation failed: items.0.productId: Path `productId` is required., userId: Path `userId` is required.","timestamp":"2026-06-20 19:40:55"}
+{"level":"error","message":"Add to Cart Error: Cart validation failed: items.0.productId: Path `productId` is required., userId: Path `userId` is required.","timestamp":"2026-06-20 19:40:57"}
+{"level":"error","message":"Add to Cart Error: Cart validation failed: items.0.productId: Path `productId` is required., userId: Path `userId` is required.","timestamp":"2026-06-20 19:40:58"}
+{"level":"error","message":"Add to Cart Error: Cart validation failed: items.0.productId: Path `productId` is required., userId: Path `userId` is required.","timestamp":"2026-06-20 19:46:28"}
+{"level":"error","message":"Add to Cart Error: Cart validation failed: items.0.productId: Path `productId` is required., userId: Path `userId` is required.","timestamp":"2026-06-20 19:49:32"}
+{"level":"error","message":"Add to Cart Error: Cart validation failed: items.0.productId: Path `productId` is required., userId: Path `userId` is required.","timestamp":"2026-06-20 19:49:33"}

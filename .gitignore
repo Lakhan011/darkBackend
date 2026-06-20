@@ -6,6 +6,9 @@
 /out-tsc
 /bazel-out
 
+.combined.log
+.error.log
+
 # Node
 /node_modules
 /monsterThemNew

@@ -11,6 +11,7 @@ router.get('/trending', productController.getTrendingProducts);
 router.get('/search', productController.searchProducts);
 router.get('/category/:categoryId', productController.getProductsByCategory);
 router.get('/subcategory/:subcategoryId', productController.getProductsBySubcategory);
+router.get('/id/:id', productController.getProductById);
 router.get('/:slug', productController.getProductBySlug);
 
 router.post('/', authenticate, authorize('ADMIN'), uploadMultiple('images'), productController.createProduct);

@@ -78,6 +78,17 @@ class ProductController {
     }
   }
 
+  async getProductById(req, res) {
+    try {
+      const data = await productService.getProductById(req.params.id);
+      const related = await productService.getRelatedProducts(data._id);
+      return responseHelper.successResponse(res, 'Product fetched', { product: data, related });
+    } catch (error) {
+      logger.error(`Get Product By ID Error: ${error.message}`);
+      return responseHelper.errorResponse(res, error.message, error.statusCode || 500);
+    }
+  }
+
   async createProduct(req, res) {
     try {
       const data = await productService.createProduct(req.body, req.files);

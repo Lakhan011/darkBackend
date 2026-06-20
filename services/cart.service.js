@@ -4,17 +4,17 @@ const Coupon = require('../models/Coupon');
 
 class CartService {
   async getCart(userId) {
-    let cart = await Cart.findOne({ user: userId }).populate('items.product');
+    let cart = await Cart.findOne({ userId }).populate('items.productId');
     if (!cart) {
-      cart = await Cart.create({ user: userId, items: [] });
+      cart = await Cart.create({ userId, items: [] });
     }
     return cart;
   }
 
   async addToCart(userId, productId, quantity, variantOption) {
-    let cart = await Cart.findOne({ user: userId });
+    let cart = await Cart.findOne({ userId });
     if (!cart) {
-      cart = new Cart({ user: userId, items: [] });
+      cart = new Cart({ userId, items: [] });
     }
 
     const product = await Product.findById(productId);
@@ -24,59 +24,91 @@ class CartService {
       throw error;
     }
 
+    const requestedQuantity = Number(quantity);
+
     const existingItemIndex = cart.items.findIndex(item => 
-      item.product.toString() === productId && item.variantOption === variantOption
+      item.productId.toString() === productId && item.variantOption === variantOption
     );
 
+    let newTotalQuantity = requestedQuantity;
     if (existingItemIndex > -1) {
-      cart.items[existingItemIndex].quantity += quantity;
+      newTotalQuantity += cart.items[existingItemIndex].quantity;
+    }
+
+    if (newTotalQuantity > product.stockQuantity) {
+      const error = new Error(`Cannot add to cart. Only ${product.stockQuantity} items available in stock.`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const sellingPrice = product.discountPrice || product.price;
+
+    if (existingItemIndex > -1) {
+      cart.items[existingItemIndex].quantity = newTotalQuantity;
+      // Update snapshot data in case it changed
+      cart.items[existingItemIndex].price = sellingPrice;
+      cart.items[existingItemIndex].productName = product.productName;
+      cart.items[existingItemIndex].thumbnail = product.thumbnail || (product.images?.length ? product.images[0] : '');
     } else {
       cart.items.push({
-        product: productId,
-        quantity,
+        productId: productId,
+        quantity: requestedQuantity,
         variantOption,
-        price: product.price
+        price: sellingPrice,
+        productName: product.productName,
+        thumbnail: product.thumbnail || (product.images?.length ? product.images[0] : '')
       });
     }
 
     await cart.save();
-    return this.getCart(userId);
+    return this.getCartSummary(userId);
   }
 
   async updateCartItem(userId, itemId, quantity) {
-    const cart = await Cart.findOne({ user: userId });
+    const cart = await Cart.findOne({ userId }).populate('items.productId');
     if (!cart) throw new Error('Cart not found');
 
     const item = cart.items.id(itemId);
     if (!item) throw new Error('Item not found in cart');
 
-    item.quantity = quantity;
+    const requestedQuantity = Number(quantity);
+    
+    // Check stock if productId is populated
+    if (item.productId && item.productId.stockQuantity !== undefined) {
+      if (requestedQuantity > item.productId.stockQuantity) {
+        const error = new Error(`Only ${item.productId.stockQuantity} items available in stock.`);
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
+    item.quantity = requestedQuantity;
     await cart.save();
-    return this.getCart(userId);
+    return this.getCartSummary(userId);
   }
 
   async removeFromCart(userId, itemId) {
-    const cart = await Cart.findOne({ user: userId });
+    const cart = await Cart.findOne({ userId });
     if (!cart) throw new Error('Cart not found');
 
     cart.items.pull(itemId);
     await cart.save();
-    return this.getCart(userId);
+    return this.getCartSummary(userId);
   }
 
   async clearCart(userId) {
-    const cart = await Cart.findOne({ user: userId });
+    const cart = await Cart.findOne({ userId });
     if (cart) {
       cart.items = [];
-      cart.coupon = undefined;
-      cart.discount = 0;
+      cart.couponCode = undefined;
+      cart.couponDiscount = 0;
       await cart.save();
     }
-    return cart;
+    return this.getCartSummary(userId);
   }
 
   async applyCoupon(userId, couponCode) {
-    const cart = await this.getCart(userId);
+    const cart = await this.getCart(userId); // ensure cart exists
     if (cart.items.length === 0) {
       throw new Error('Cart is empty');
     }
@@ -110,18 +142,18 @@ class CartService {
       discount = coupon.discountValue;
     }
 
-    cart.coupon = coupon._id;
-    cart.discount = discount;
+    cart.couponCode = coupon.code;
+    cart.couponDiscount = discount;
     await cart.save();
 
     return this.getCartSummary(userId);
   }
 
   async removeCoupon(userId) {
-    const cart = await Cart.findOne({ user: userId });
+    const cart = await Cart.findOne({ userId });
     if (cart) {
-      cart.coupon = undefined;
-      cart.discount = 0;
+      cart.couponCode = undefined;
+      cart.couponDiscount = 0;
       await cart.save();
     }
     return this.getCartSummary(userId);
@@ -132,13 +164,14 @@ class CartService {
     
     let subtotal = 0;
     for (const item of cart.items) {
-      const price = item.product.price || item.price; // fallback if product is unpopulated
+      // Use the snapshotted price inside the cart item for the subtotal to avoid breaking if product is deleted
+      const price = item.price || 0; 
       subtotal += price * item.quantity;
     }
 
-    const discount = cart.discount || 0;
-    const tax = (subtotal - discount) * 0.18; // Assume 18% tax
-    const shipping = subtotal > 500 ? 0 : 50; // Free shipping over 500
+    const discount = cart.couponDiscount || 0;
+    const tax = 0; // Removing tax for simplicity unless requested
+    const shipping = (subtotal > 0 && subtotal < 500) ? 40 : 0; // Flat 40rs shipping if < 500
     const total = subtotal - discount + tax + shipping;
 
     return {
@@ -148,7 +181,8 @@ class CartService {
       shipping,
       total,
       items: cart.items,
-      couponApplied: !!cart.coupon
+      couponApplied: !!cart.couponCode,
+      couponCode: cart.couponCode
     };
   }
 }

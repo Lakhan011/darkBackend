@@ -26,7 +26,7 @@ const productSchema = new mongoose.Schema({
   discountPrice: Number,
   offerPrice: Number,
   taxPercentage: { type: Number, default: 18 },
-  // stockQuantity: { type: Number, default: 0 },
+  stockQuantity: { type: Number, default: 100 },
   // minOrderQty: { type: Number, default: 1 },
   // maxOrderQty: { type: Number, default: 10 },
   // variants: [{

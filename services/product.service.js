@@ -71,10 +71,27 @@ class ProductService {
     )
     .populate('categoryId', 'name slug')
     .populate('subcategoryId', 'name slug')
-    .populate('sellerId', 'name email')
-    .populate('reviews');
+    .populate('sellerId', 'name email');
 
     if (!product) {
+      const error = new Error('Product not found');
+      error.statusCode = 404;
+      throw error;
+    }
+    return product;
+  }
+
+  async getProductById(id) {
+    const product = await Product.findByIdAndUpdate(
+      id,
+      { $inc: { views: 1 } },
+      { new: true }
+    )
+    .populate('categoryId', 'name slug')
+    .populate('subcategoryId', 'name slug')
+    .populate('sellerId', 'name email storeName');
+
+    if (!product || product.status === 'DELETED') {
       const error = new Error('Product not found');
       error.statusCode = 404;
       throw error;
